@@ -11,11 +11,8 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
   */
 class EqilibriumDescentEstimator(odm: RDD[(Zone, Array[(Zone, Double)])],
                                  counts: Array[(Int, Double)],
-                                 g: Broadcast[Graph],
-                                 initCost: Array[Double],
-                                 capacity: Array[Double],
-                                 maxIter: Int,
-                                 cf: CostFunction = new BasicCostFunction()
+                                 assignmentor: PathBasedAssignment,
+                                 maxIter: Int
                                 ) extends ODMEstimator with Serializable{
 
   override def estimate(): Constant.ROWODM = {
@@ -23,7 +20,7 @@ class EqilibriumDescentEstimator(odm: RDD[(Zone, Array[(Zone, Double)])],
     hm ++= counts
 
     // assignment
-    val assignmentor = new PathBasedAssignment(g, initCost, cf, capacity, 8, 0, 0.8)
+    //val assignmentor = new PathBasedAssignment(g, initCost, cf, capacity, 8, 1, 0.005)
 
     //main loap
     var iter = 0

@@ -3,6 +3,7 @@ import java.sql.{Connection, DriverManager}
 
 import com.kolovsky.modeler.Zone
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -49,6 +50,43 @@ class BasicDatabase(uri: String, modelName: String) extends Database {
       cost += rs.getDouble("cost")
     }
     cost.toArray
+  }
+
+  def getId(): Array[Int] = {
+    val connection = getConnection()
+    connection.setAutoCommit(false)
+    val sql = "SELECT edge_id FROM "+modelName+".edge ORDER BY edge_id;"
+    val st = connection.prepareStatement(sql)
+    st.setFetchSize(10000)
+    val rs = st.executeQuery()
+    val cost: ArrayBuffer[Int] = ArrayBuffer()
+    while (rs.next()){
+      cost += rs.getInt("edge_id")
+    }
+    cost.toArray
+  }
+
+  def getProfile(): Array[(Int, Double)]={
+    val hm = mutable.HashMap.empty[Int, Int]
+    val ids = getId()
+
+    for(i <- ids.indices){
+      hm += ((ids(i), i))
+    }
+
+    val connection = getConnection()
+    connection.setAutoCommit(false)
+    val sql = "SELECT edge_id, traffic FROM "+modelName+".profile;"
+    val st = connection.prepareStatement(sql)
+    st.setFetchSize(10000)
+    val rs = st.executeQuery()
+    val profiles: ArrayBuffer[(Int, Double)] = ArrayBuffer()
+    while (rs.next()){
+      val id =  rs.getInt("edge_id")
+      val i = hm(id)
+      profiles += ((i, rs.getDouble("traffic")))
+    }
+    profiles.toArray
   }
 
   override def getODM(): Array[(Zone, Zone, Double)] = {
