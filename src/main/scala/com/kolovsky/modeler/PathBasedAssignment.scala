@@ -35,7 +35,7 @@ class PathBasedAssignment(g: Broadcast[Graph],
     * @param odm - Origin-Destinatin Matrix
     * @return traffic edge map
     */
-  def run(odm: Constant.ROWODM): Array[Double] ={
+  def run(odm: Types.ROWODM): Array[Double] ={
     // INICIALIZATION
     val paths = odm.map(x => {
       val target = x._2.map(t => (t._1.n, t))
@@ -151,7 +151,7 @@ class PathBasedAssignment(g: Broadcast[Graph],
     }))
   }
 
-  def relativeGap(OF: Double, trafficEdgeMap: Array[Double], costEdgeMap: Array[Double], odm: Constant.ROWODM): Double ={
+  def relativeGap(OF: Double, trafficEdgeMap: Array[Double], costEdgeMap: Array[Double], odm: Types.ROWODM): Double ={
     val aon = new AllOrNothingAssignment(g, costEdgeMap)
     val aon_trafficEdgeMap = aon.run(odm)
     var gap: Double = 0

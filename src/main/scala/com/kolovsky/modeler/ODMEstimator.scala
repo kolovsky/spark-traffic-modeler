@@ -9,7 +9,7 @@ trait ODMEstimator {
     * Calibrate ODM using by reference counts
     * @return calibrated ODM
     */
-  def estimate(): Constant.ROWODM
+  def estimate(): Types.ROWODM
 
   /**
     * Return info about computation

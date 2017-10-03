@@ -8,6 +8,6 @@ trait Assignment {
     * perform assignment
     * @return traffic edge map
     */
-  def run(odm: Constant.ROWODM): Array[Double]
+  def run(odm: Types.ROWODM): Array[Double]
   def getInfo(): String
 }

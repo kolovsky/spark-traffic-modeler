@@ -15,7 +15,7 @@ class EqilibriumDescentEstimator(odm: RDD[(Zone, Array[(Zone, Double)])],
                                  maxIter: Int
                                 ) extends ODMEstimator with Serializable{
 
-  override def estimate(): Constant.ROWODM = {
+  override def estimate(): Types.ROWODM = {
     val hm = HashMap.empty[Int, Double]
     hm ++= counts
 

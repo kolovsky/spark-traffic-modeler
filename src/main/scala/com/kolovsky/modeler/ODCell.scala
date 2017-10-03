@@ -12,4 +12,6 @@ class ODCell {
   var t: Zone = _
   var gradient: Double = 0
   var direction: Double = 0
+  var old_gradient: Double = 0
+  var old_direction: Double = 0
 }
