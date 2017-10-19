@@ -1,6 +1,7 @@
 package com.kolovsky.app
 import java.sql.{Connection, DriverManager}
 
+import com.kolovsky.graph.Edge
 import com.kolovsky.modeler.Zone
 
 import scala.collection.mutable
@@ -104,6 +105,22 @@ class BasicDatabase(uri: String, modelName: String) extends Database {
     }
     odm.toArray
   }
+
+  def getZones(): Array[(Zone, Double)] ={
+    val connection = getConnection()
+    connection.setAutoCommit(false)
+    val sql = "SELECT zone_id, node_id, trips FROM "+modelName+".zone where trips != 0;"
+    val st = connection.prepareStatement(sql)
+    st.setFetchSize(10000)
+    val rs = st.executeQuery()
+    val edges: ArrayBuffer[(Zone, Double)] = ArrayBuffer()
+    while (rs.next()){
+      val z = new Zone(rs.getInt("zone_id"), rs.getInt("node_id"))
+      edges += ((z, rs.getDouble("trips")))
+    }
+    edges.toArray
+  }
+
   private def getConnection(): Connection ={
     try{
       Class.forName("org.postgresql.Driver")

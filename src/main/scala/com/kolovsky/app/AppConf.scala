@@ -7,6 +7,7 @@ import com.typesafe.config.{Config, ConfigFactory}
   */
 object AppConf {
   val confFile = "/home/kolovsky/Dokumenty/traffic-modeler/modeler/modeler.conf"
+  //val confFile = "/home/kolovsky/modeler.conf"
   /**
     *
     * @return configuration

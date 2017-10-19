@@ -58,7 +58,7 @@ object Modeler extends SparkJob with NamedObjectSupport{
   def loadModel(sc: SparkContext, name: String): Unit = {
     val db_url = ConfigFactory.load("modeler.conf").getString("modeler.database.url")
     // Database
-    val d = new BasicDatabase(AppConf.getConf().getString("modeler.database.url"), name)
+    val d = new BasicDatabase(db_url, name)
 
     // Graph persist
     val g = new Graph()
@@ -94,7 +94,7 @@ object Modeler extends SparkJob with NamedObjectSupport{
     val NamedBroadcast(bc_graph) = namedObjects.get[NamedBroadcast[Graph]](modelName+":bc:graph").get
 
     // defines cost function
-    val cf = new BasicCostFunction()
+    val cf = new BasicCostFunction(0.75, 4)
 
     // cost and capacity
     val cost = bc_graph.value.properties("cost").asInstanceOf[Array[Double]].clone()
