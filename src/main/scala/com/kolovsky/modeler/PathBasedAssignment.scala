@@ -36,6 +36,7 @@ class PathBasedAssignment(g: Broadcast[Graph],
     * @return traffic edge map
     */
   def run(odm: Types.ROWODM): Array[Double] ={
+    val time = System.currentTimeMillis()
     // INICIALIZATION
     val paths = odm.map(x => {
       val target = x._2.map(t => (t._1.n, t))
@@ -126,7 +127,8 @@ class PathBasedAssignment(g: Broadcast[Graph],
 
       // relative gap
       rg = relativeGap(OF, trafficEdgeMap, cost, odm)
-      println("RG: "+rg)
+      //println("RG: "+rg)
+      println((System.currentTimeMillis() - time)+", "+rg)
       info += (", "+rg)
 
     }

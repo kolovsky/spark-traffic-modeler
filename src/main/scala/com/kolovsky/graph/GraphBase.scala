@@ -24,20 +24,6 @@ trait GraphBase {
   def addNode(id: Int): Node
 
   /**
-    * Disables edge in the Graph
-    * @param e - edge for disabling
-    * @param mode - disable only in one(1)/oposite(2)/both(3) direction
-    */
-  def disableEdge(e: Edge, mode: Int): Unit
-
-  /**
-    * Enable disabled edge
-    * @param e - edge for enabling
-    * @param oneDirection - is one direction?
-    */
-  def enableEdge(e: Edge, oneDirection: Boolean):Unit
-
-  /**
     *
     * @return Number of nodes in graph
     */

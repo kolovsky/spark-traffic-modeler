@@ -7,8 +7,8 @@ import scala.collection.mutable.{ArrayBuffer, PriorityQueue}
   * Created by kolovsky on 22.5.17.
   */
 class Graph() extends GraphBase with Serializable{
-  var nodes: Array[Node] = null
-  var edges: Array[Edge] = null
+  var nodes: Array[Node] = _
+  var edges: Array[Edge] = _
   val properties: mutable.Map[String, Any] = mutable.Map()
   val hm: mutable.HashMap[Int, Node] = mutable.HashMap()
 
@@ -17,7 +17,7 @@ class Graph() extends GraphBase with Serializable{
     if (tmp.isEmpty){
       throw new Exception("Node ID "+id+" does not exists!")
     }
-    return tmp.get
+    tmp.get
   }
 
   override def addEdges(edges: Array[(Int, Int, Boolean)]): Array[Int] = {
@@ -34,12 +34,12 @@ class Graph() extends GraphBase with Serializable{
     }
     val hmArr = hm.toArray
     this.nodes = hmArr.map(_._2)
-    for (i <- 0 until this.nodes.length){
+    for (i <- nodes.indices){
       nodes(i).i = i
     }
 
     //adding edges
-    for (ei <- 0 until edges.length){
+    for (ei <- edges.indices){
       val s_node = idToNode(edges(ei)._1)
       val t_node = idToNode(edges(ei)._2)
       this.edges(ei) = new Edge(s_node.i, t_node.i, ei)
@@ -47,6 +47,8 @@ class Graph() extends GraphBase with Serializable{
       // true means one Direction
       if (edges(ei)._3){
         s_node.edges += this.edges(ei)
+        // incoming edges
+        t_node.income_edges += this.edges(ei)
       }
       else{
         s_node.edges += this.edges(ei)
@@ -96,50 +98,7 @@ class Graph() extends GraphBase with Serializable{
     nodes(nodes.length - 1) = n
     // add to HashMap
     hm += ((id, n))
-    return n
-  }
-
-  // mode: 1 - inDirection, 2 - opositeDirection, 3 - bothDirection
-  override def disableEdge(e: Edge, mode: Int): Unit = {
-    val s_node = nodes(e.s)
-    val t_node = nodes(e.t)
-    // inDirection
-    if (mode == 1 || mode == 3){
-      var j = -1
-      for (i <- 0 until s_node.edges.length){
-        if (s_node.edges(i).i == e.i){
-          j = i
-        }
-      }
-      if (j != -1){
-        s_node.edges.remove(j)
-      }
-    }
-    // opositeDirection
-    if (mode == 2 || mode == 3){
-      var j = -1
-      for (i <- 0 until t_node.edges_oposite.length){
-        if (t_node.edges_oposite(i).i == e.i){
-          j = i
-        }
-      }
-      if (j != -1){
-        t_node.edges_oposite.remove(j)
-      }
-    }
-  }
-
-  override def enableEdge(e: Edge, oneDirection: Boolean): Unit = {
-    val s_node = nodes(e.s)
-    val t_node = nodes(e.t)
-
-    if (oneDirection){
-      s_node.edges += e
-    }
-    else{
-      s_node.edges += e
-      t_node.edges_oposite += e
-    }
+    n
   }
 
   override def searchDijkstra(s: Int, cost: Array[Double]): (Array[Double], Array[Edge]) = {
@@ -184,7 +143,7 @@ class Graph() extends GraphBase with Serializable{
     return paths
   }
 
-  private def getPath(prev: Array[Edge], t: Int): Array[Edge] ={
+  def getPath(prev: Array[Edge], t: Int): Array[Edge] ={
     val t_node = idToNode(t)
     val path: ArrayBuffer[Edge] = ArrayBuffer()
     var ae = prev(t_node.i)
@@ -205,27 +164,130 @@ class Graph() extends GraphBase with Serializable{
       }
 
     }
-    return path.reverse.toArray
+    path.reverse.toArray
   }
 
   override def getShortestPathsTrips(s: Int, t: Array[(Int, Double)], cost: Array[Double]): Array[(Int, Double, Double, Array[Edge])] = {
     val (dist, prev) = searchDijkstra(s, cost)
     val paths: Array[(Int, Double, Double, Array[Edge])] = Array.ofDim(t.length)
-    for (i <- 0 until t.length){
+    for (i <- t.indices){
       val t_node = idToNode(t(i)._1)
       paths(i) = ( t(i)._1, dist(t_node.i),t(i)._2, getPath(prev, t(i)._1) )
     }
-    return paths
+    paths
   }
 
   def getShortestPathsT[T](s: Int, t: Array[(Int, T)], cost: Array[Double]): Array[(Int, Double, T, Array[Edge])] = {
     val (dist, prev) = searchDijkstra(s, cost)
     val paths: Array[(Int, Double, T, Array[Edge])] = Array.ofDim(t.length)
-    for (i <- 0 until t.length){
+    for (i <- t.indices){
       val t_node = idToNode(t(i)._1)
       paths(i) = ( t(i)._1, dist(t_node.i), t(i)._2, getPath(prev, t(i)._1) )
     }
     paths
+  }
+
+  /**
+    * Compute "bush" according to
+    * Robert B. Dial, A path-based user-equilibrium traffic assignment algorithm that obviates path storage and enumeration,
+    * In Transportation Research Part B: Methodological, Volume 40, Issue 10, 2006, Pages 917-936, ISSN 0191-2615,
+    * https://doi.org/10.1016/j.trb.2006.02.008.
+    * @param s source node ID
+    * @param cost cost edge map
+    * @return
+    */
+  def getBush(s: Int, cost: Array[Double]): Array[Boolean] = {
+    // Funguje pouze pro directed graph => v addEdges musi mit vsechny hrany TRUE !!!!
+    val (dist, prev) = searchDijkstra(s, cost)
+    val bush = Array.ofDim[Boolean](edges.length)
+    for (i <- edges.indices){
+      val e = edges(i)
+      if (dist(e.t) > dist(e.s)){
+        bush(i) = true
+      }
+      else {
+        bush(i) = false
+      }
+    }
+    bush
+  }
+
+  /**
+    * Compute shortest and costest tree form source node "s". Mask must represent "bush" origins at "s".
+    * @param s source node id
+    * @param cost edge cost map
+    * @param mask bush
+    * @param bush_traffic traffic at bush form origin (used for max path constraints)
+    * @return ((dist_min, prev_min),(dist_max, prev_max))
+    */
+  def getMinMaxTree(s: Int,
+                    cost: Array[Double],
+                    mask: Array[Boolean],
+                    bush_traffic: Array[Double]): ((Array[Double], Array[Edge]), (Array[Double], Array[Edge])) = {
+
+    val dist_min = Array.fill[Double](nodes.length)(Double.PositiveInfinity)
+    val dist_max = Array.fill[Double](nodes.length)(Double.NegativeInfinity)
+    val prev_min = Array.ofDim[Edge](nodes.length)
+    val prev_max = Array.ofDim[Edge](nodes.length)
+
+    val order_mask = mask.clone()
+    val q = mutable.Queue.empty[Node]
+    val s_n = idToNode(s)
+    q += s_n
+    dist_min(s_n.i) = 0
+    dist_max(s_n.i) = 0
+
+
+    while (q.nonEmpty){
+      val n = q.dequeue()
+      for (e <- n.edges){
+        // is edge valid
+        if (order_mask(e.i)){
+          //maximum
+          //max path can use only edges with non zero traffic (active edges)
+          if (bush_traffic(e.i) != 0){
+            val new_max_value = dist_max(n.i) + cost(e.i)
+            if (dist_max(e.t) < new_max_value){
+              dist_max(e.t) = new_max_value
+              prev_max(e.t) = e
+            }
+          }
+
+          //minimum
+          val new_min_value = dist_min(n.i) + cost(e.i)
+          if (dist_min(e.t) > new_min_value){
+            dist_min(e.t) = new_min_value
+            prev_min(e.t) = e
+          }
+          order_mask(e.i) = false
+
+          //testing for incoming edges
+          val m = nodes(e.t)
+          if (!existsIncomeEdge(m, order_mask)){
+            q += m
+          }
+        }
+      }
+    }
+    if (order_mask.count(x => x) != 0){
+      //throw new Exception("mask do not represent acyclic graph")
+    }
+    ((dist_min, prev_min),(dist_max, prev_max))
+  }
+
+  /**
+    * Return True if exists some incomeing edges, else False
+    * @param n node
+    * @param mask edge mask, false means disabled edge
+    * @return
+    */
+  def existsIncomeEdge(n: Node, mask: Array[Boolean]): Boolean = {
+    for (ep <- n.income_edges){
+      if (mask(ep.i)){
+        return true
+      }
+    }
+    false
   }
 
 }

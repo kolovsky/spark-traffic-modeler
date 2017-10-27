@@ -5,7 +5,7 @@ package com.kolovsky.modeler
   */
 class BasicCostFunction(alpha: Double, beta: Double) extends CostFunction with Serializable{
   override def cost(traffic: Double, capacity: Double, initCost: Double): Double = {
-    initCost * (1 + 0.15 * math.pow(traffic/capacity, 4))
+    initCost * (1 + alpha * math.pow(traffic/capacity, beta))
   }
 
   override def derivation(traffic: Double, capacity: Double, initCost: Double): Double = {
