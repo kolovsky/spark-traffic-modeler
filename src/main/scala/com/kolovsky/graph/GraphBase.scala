@@ -8,13 +8,13 @@ trait GraphBase {
     * Method for construct graph.
     * @param edges list of edges (source_node_id, target_node_id, isOneDirection)
     */
-  def addEdges(edges: Array[(Int, Int, Boolean)]): Array[Int]
+  def addEdges(edges: Array[(Int, Int)]): Array[Int]
 
   /**
     * Add new Edge to the Graph. O(|E|) - linear complexity
     * @param e new edge (source_node_id, target_node_id, isOneDirection)
     */
-  def addEdge(e: (Int, Int, Boolean)): Unit
+  def addEdge(e: (Int, Int)): Unit
 
   /**
     * Add new Node to the Graph. O(|N|) - linear complexity

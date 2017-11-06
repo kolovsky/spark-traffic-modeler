@@ -11,16 +11,16 @@ import scala.collection.mutable.ArrayBuffer
   * Created by kolovsky on 5.6.17.
   */
 class BasicDatabase(uri: String, modelName: String) extends Database {
-  override def getEdges(): Array[(Int, Int, Boolean)] = {
+  override def getEdges(): Array[(Int, Int)] = {
     val connection = getConnection()
     connection.setAutoCommit(false)
-    val sql = "SELECT source, target, one_direction FROM "+modelName+".edge ORDER BY edge_id;"
+    val sql = "SELECT source, target FROM "+modelName+".edge ORDER BY edge_id;"
     val st = connection.prepareStatement(sql)
     st.setFetchSize(10000)
     val rs = st.executeQuery()
-    val edges: ArrayBuffer[(Int, Int, Boolean)] = ArrayBuffer()
+    val edges: ArrayBuffer[(Int, Int)] = ArrayBuffer()
     while (rs.next()){
-      edges += ((rs.getInt("source"), rs.getInt("target"), rs.getBoolean("one_direction")))
+      edges += ((rs.getInt("source"), rs.getInt("target")))
     }
     edges.toArray
   }
