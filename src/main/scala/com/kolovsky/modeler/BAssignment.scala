@@ -20,6 +20,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param maxIter maximum number of iteration
   * @param epsilon maximum relative gap
   * @param callbackIter this function is call after every iteration with traffic argument
+  * @param debug true for debugging
   */
 
 class BAssignment(g: Broadcast[Graph],
@@ -28,9 +29,8 @@ class BAssignment(g: Broadcast[Graph],
                   capacityEdgeMap: Array[Double],
                   maxIter: Int,
                   epsilon: Double,
-                  callbackIter: Array[Double] => Unit = _ => ()) extends Assignment with Serializable {
-
-  var lbs: ArrayBuffer[Double] = ArrayBuffer.empty
+                  callbackIter: Array[Double] => Unit = _ => (),
+                  debug: Boolean = false) extends EquilibriumAssignment(g, debug) with Serializable {
 
   override def run(odm: ROWODM): Array[Double] = {
     println("This algorithm can not be distributed. Serial algorithm are going to be performed.")
@@ -38,8 +38,7 @@ class BAssignment(g: Broadcast[Graph],
   }
 
   def runSerial(odm: ROWODM): Array[Double] = {
-    // time
-    val time = System.currentTimeMillis()
+    startTime = System.currentTimeMillis()
 
     // creating bush and loading bush
     val bushes = odm.map(row =>{
@@ -116,7 +115,7 @@ class BAssignment(g: Broadcast[Graph],
 
         // relative gap
         rg = relativeGap(OF, trafficEdgeMap, cost, odm)
-        println((System.currentTimeMillis() - time)+", "+rg)
+        writeInfo(f"rg = $rg%.5f")
 
         // callback
         callbackIter(trafficEdgeMap)
@@ -251,7 +250,7 @@ class BAssignment(g: Broadcast[Graph],
         dx = 0
       }
 
-      //actualizate traffic addition
+      //actualize traffic addition
       for (e <- p_min){
         traffic_addition(e.i) = dx
       }
@@ -287,22 +286,4 @@ class BAssignment(g: Broadcast[Graph],
     }
     bush_traffic
   }
-
-  def relativeGap(OF: Double, trafficEdgeMap: Array[Double], costEdgeMap: Array[Double], odm: Types.ROWODM): Double ={
-    val aon = new AllOrNothingAssignment(g, costEdgeMap)
-    val aon_trafficEdgeMap = aon.run(odm)
-    var gap: Double = 0
-    for (i <- trafficEdgeMap.indices){
-      gap += costEdgeMap(i) * (aon_trafficEdgeMap(i) - trafficEdgeMap(i))
-    }
-    lbs += (OF + gap)
-    val blb = lbs.max
-    val rg = - gap / math.abs(blb)
-    rg
-  }
-
-  override def getInfo(): String = {
-    null
-  }
-
 }

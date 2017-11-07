@@ -16,6 +16,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param epsilon maximal relative gap
   * @param alpha step size for GP algorithm
   * @param callbackIter callback function, that is call after every iteration with traffic edge map
+  * @param debug true for debugging
   */
 class PathBasedAssignment(g: Broadcast[Graph],
                           initCost: Array[Double],
@@ -24,11 +25,10 @@ class PathBasedAssignment(g: Broadcast[Graph],
                           maxIter: Int,
                           epsilon: Double,
                           alpha: Double,
-                          callbackIter: Array[Double] => Unit = _ => ()) extends Assignment with Serializable{
+                          callbackIter: Array[Double] => Unit = _ => (),
+                          debug: Boolean = false) extends EquilibriumAssignment(g, debug) with Serializable{
 
   var ps_rdd: RDD[Array[PathSet]] = _
-  var lbs: ArrayBuffer[Double] = ArrayBuffer.empty
-  var info: String = ""
 
   /**
     * Perform the algorithm with Origin-Destinatin Matrix
@@ -36,7 +36,7 @@ class PathBasedAssignment(g: Broadcast[Graph],
     * @return traffic edge map
     */
   def run(odm: Types.ROWODM): Array[Double] ={
-    val time = System.currentTimeMillis()
+    startTime = System.currentTimeMillis()
     // INICIALIZATION
     val paths = odm.map(x => {
       val target = x._2.map(t => (t._1.n, t))
@@ -59,7 +59,6 @@ class PathBasedAssignment(g: Broadcast[Graph],
     val OF_init = g.value.edges.map(e => {
       cf.integral(trafficEdgeMap(e.i), capacityEdgeMap(e.i), initCost(e.i))
     }).sum
-    println("OF init = "+math.floor(OF_init))
 
     // init PathSet
      ps_rdd = paths.map(row => row.map(x => {
@@ -127,20 +126,10 @@ class PathBasedAssignment(g: Broadcast[Graph],
 
       // relative gap
       rg = relativeGap(OF, trafficEdgeMap, cost, odm)
-      //println("RG: "+rg)
-      println((System.currentTimeMillis() - time)+", "+rg)
-      info += (", "+rg)
+      writeInfo(f"rg = $rg%.4f")
 
     }
     trafficEdgeMap
-  }
-
-  /**
-    * Get information about computing (e.g value of objective function)
-    * @return
-    */
-  def getInfo(): String ={
-    null
   }
 
   /**
@@ -152,18 +141,4 @@ class PathBasedAssignment(g: Broadcast[Graph],
       ps.toODCell()
     }))
   }
-
-  def relativeGap(OF: Double, trafficEdgeMap: Array[Double], costEdgeMap: Array[Double], odm: Types.ROWODM): Double ={
-    val aon = new AllOrNothingAssignment(g, costEdgeMap)
-    val aon_trafficEdgeMap = aon.run(odm)
-    var gap: Double = 0
-    for (i <- trafficEdgeMap.indices){
-      gap += costEdgeMap(i) * (aon_trafficEdgeMap(i) - trafficEdgeMap(i))
-    }
-    lbs += (OF + gap)
-    val blb = lbs.max
-    val rg = - gap / math.abs(blb)
-    rg
-  }
-
 }
