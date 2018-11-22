@@ -1,7 +1,7 @@
 Spark Traffic Modeler
 =====================
 
-Tool for transport modeling for Apache Spark. The aim of the project is implement two step (Origin-Destination matrix estimation and Traffic assignment) of the four-step transport model. All algorithms are implement in Apache Spark environment, therefore it is possible to create a large models.
+Tool for transport modeling for Apache Spark. The aim of the project is implement two step (Origin-Destination matrix estimation and Traffic assignment) of the four-step transport model. All algorithms have been implemented in Apache Spark environment, therefore it is possible to create large traffic models.
 
 Traffic Assignment
 ------------------
