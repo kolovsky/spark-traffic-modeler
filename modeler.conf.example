@@ -1,5 +1,0 @@
-modeler{
-  database{
-    url = "jdbc:postgresql://host:port/postgis?user=user&password=password"
-  }
-}

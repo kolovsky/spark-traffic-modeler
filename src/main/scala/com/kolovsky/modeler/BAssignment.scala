@@ -61,6 +61,7 @@ class BAssignment(g: Broadcast[Graph],
         trafficEdgeMap(i) += bb._3(i)
       }
     }
+    callbackIter(trafficEdgeMap)
 
     cost = g.value.edges.map(e => cf.cost(trafficEdgeMap(e.i), capacityEdgeMap(e.i), initCost(e.i)))
 

@@ -11,11 +11,28 @@ class Graph() extends GraphBase with Serializable{
   var edges: Array[Edge] = _
   val properties: mutable.Map[String, Any] = mutable.Map()
   val hm: mutable.HashMap[Int, Node] = mutable.HashMap()
+  val hme: mutable.HashMap[Int, Edge] = mutable.HashMap()
 
   def idToNode(id: Int): Node ={
     val tmp = hm.get(id)
     if (tmp.isEmpty){
       throw new Exception("Node ID "+id+" does not exists!")
+    }
+    tmp.get
+  }
+
+  /**
+    *
+    * @param edge_id ID of edge
+    * @return
+    */
+  def idToEdge(edge_id: Int): Edge = {
+    if (hme.isEmpty){
+      throw new Exception("Please add edge IDs (function addEdgeIDs)")
+    }
+    val tmp = hme.get(edge_id)
+    if (tmp.isEmpty){
+      throw new Exception("Node ID "+edge_id+" does not exists!")
     }
     tmp.get
   }
@@ -53,6 +70,28 @@ class Graph() extends GraphBase with Serializable{
     hmArr.map(_._1)
   }
 
+  /**
+    *
+    * @param tr edge map turn restriction (edge ID)
+    */
+  def addTurnRestriction(tr: Array[Array[Int]]): Unit ={
+    for (i <- tr.indices){
+      if (tr(i) != null){
+        edges(i).tr = tr(i).map(edge_id => idToEdge(edge_id).i)
+      }
+    }
+  }
+
+  /**
+    *
+    * @param edge_map_id edge map ID
+    */
+  def addEdgeIDs(edge_map_id: Array[Int]): Unit = {
+    for (i <- edge_map_id.indices){
+      hme += ((edge_map_id(i), edges(i)))
+    }
+  }
+
   override def numberEdges(): Int = edges.length
 
   override def numberNodes(): Int = nodes.length
@@ -88,7 +127,7 @@ class Graph() extends GraphBase with Serializable{
     n
   }
 
-  override def searchDijkstra(s: Int, cost: Array[Double]): (Array[Double], Array[Edge]) = {
+  def searchDijkstraNTR(s: Int, cost: Array[Double]): (Array[Double], Array[Edge]) = {
     if (cost.length != edges.length){
       throw new Exception("cost have to same length as edges array")
     }
@@ -111,6 +150,38 @@ class Graph() extends GraphBase with Serializable{
       }
     }
     (dist, prev)
+  }
+
+  def searchDijkstraTR(s: Int, cost: Array[Double]): (Array[Double], Array[Edge]) = {
+    if (cost.length != edges.length){
+      throw new Exception("cost have to same length as edges array")
+    }
+    val pq = PriorityQueue.empty[(Double, Node, Edge)](MinOrderEdge)
+    val s_node = idToNode(s)
+    val dist: Array[Double] = Array.fill(nodes.length)(Double.PositiveInfinity)
+    val prev: Array[Edge] = Array.ofDim(nodes.length)
+
+    dist(s_node.i) = 0
+    pq.enqueue((0, s_node, null))
+
+    while (pq.nonEmpty){
+      val tmp = pq.dequeue()
+      val n = tmp._2
+      val in_e = tmp._3
+
+      for (e <- n.getOutComeEdges(in_e)){
+        if (dist(n.i) + cost(e.i) < dist(e.t)){
+          dist(e.t) = dist(n.i) + cost(e.i)
+          pq.enqueue((dist(e.t), nodes(e.t), e))
+          prev(e.t) = e
+        }
+      }
+    }
+    (dist, prev)
+  }
+
+  override def searchDijkstra(s: Int, cost: Array[Double]): (Array[Double], Array[Edge]) ={
+    searchDijkstraTR(s, cost)
   }
 
   override def getShortestPaths(s: Int, t: Array[Int], cost: Array[Double]): Array[(Int, Double, Array[Edge])] = {
@@ -197,16 +268,16 @@ class Graph() extends GraphBase with Serializable{
     val prev_max = Array.ofDim[Edge](nodes.length)
 
     val order_mask = mask.clone()
-    val q = mutable.Queue.empty[Node]
+    val q = mutable.Queue.empty[(Node, Edge)]
     val s_n = idToNode(s)
-    q += s_n
+    q += ((s_n, null))
     dist_min(s_n.i) = 0
     dist_max(s_n.i) = 0
 
 
     while (q.nonEmpty){
-      val n = q.dequeue()
-      for (e <- n.edges){
+      val (n, in_e) = q.dequeue()
+      for (e <- n.getOutComeEdges(in_e)){
         // is edge valid
         if (order_mask(e.i)){
           //maximum
@@ -230,7 +301,7 @@ class Graph() extends GraphBase with Serializable{
           //testing for incoming edges
           val m = nodes(e.t)
           if (!existsIncomeEdge(m, order_mask)){
-            q += m
+            q += ((m, e))
           }
         }
       }

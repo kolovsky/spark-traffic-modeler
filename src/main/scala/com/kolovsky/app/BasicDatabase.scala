@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 class BasicDatabase(uri: String, modelName: String) extends Database {
   override def getEdges(): Array[(Int, Int)] = {
     val connection = getConnection()
-    connection.setAutoCommit(false)
+    //connection.setAutoCommit(false)
     val sql = "SELECT source, target FROM "+modelName+".edge ORDER BY edge_id;"
     val st = connection.prepareStatement(sql)
     st.setFetchSize(10000)
@@ -42,13 +42,18 @@ class BasicDatabase(uri: String, modelName: String) extends Database {
   override def getCost(): Array[Double] = {
     val connection = getConnection()
     connection.setAutoCommit(false)
-    val sql = "SELECT cost FROM "+modelName+".edge ORDER BY edge_id;"
+    val sql = "SELECT cost, isvalid FROM "+modelName+".edge ORDER BY edge_id;"
     val st = connection.prepareStatement(sql)
     st.setFetchSize(10000)
     val rs = st.executeQuery()
     val cost: ArrayBuffer[Double] = ArrayBuffer()
     while (rs.next()){
-      cost += rs.getDouble("cost")
+      if (rs.getBoolean("isvalid")){
+        cost += rs.getDouble("cost")
+      }
+      else{
+        cost += Double.PositiveInfinity
+      }
     }
     cost.toArray
   }
@@ -103,6 +108,7 @@ class BasicDatabase(uri: String, modelName: String) extends Database {
       val t = new Zone(rs.getInt("target"), rs.getInt("target_node"))
       odm += ((s, t, rs.getDouble("flow")))
     }
+    connection.close()
     odm.toArray
   }
 
@@ -121,13 +127,40 @@ class BasicDatabase(uri: String, modelName: String) extends Database {
     edges.toArray
   }
 
+  def saveResult(modelName: String, cache_name: String,config: String, result: String): Unit = {
+    val connection = getConnection()
+    // delete previus record
+    val delete_sql = "DELETE FROM "+modelName+".cache WHERE \"name\" = '"+cache_name+"';"
+    connection.prepareStatement(delete_sql).executeUpdate()
+
+    // insert new record
+    val sql = "INSERT INTO "+modelName+".cache(\"name\", config, result) VALUES ('"+cache_name+"', '"+config+"', '"+result+"');"
+    val st = connection.prepareStatement(sql)
+    st.executeUpdate()
+    connection.close()
+  }
+
   private def getConnection(): Connection ={
-    try{
-      Class.forName("org.postgresql.Driver")
-      return  DriverManager.getConnection(uri)
-    }catch {
-      case e => e.printStackTrace
+    Class.forName("org.postgresql.Driver")
+    DriverManager.getConnection(uri)
+  }
+
+  def getTurnRestriction(): Array[Array[Int]] ={
+    val connection = getConnection()
+    val sql = "SELECT turn_restriction FROM "+modelName+".edge ORDER BY edge_id"
+    val st = connection.prepareStatement(sql)
+    st.setFetchSize(10000)
+    val rs = st.executeQuery()
+    val tr: ArrayBuffer[Array[Int]] = ArrayBuffer()
+    while (rs.next()){
+      val text = rs.getString("turn_restriction")
+      if (text == "" || text == null){
+        tr += Array()
+      }
+      else{
+        tr += text.split(",").map(id => id.toInt)
+      }
     }
-    null
+    tr.toArray
   }
 }

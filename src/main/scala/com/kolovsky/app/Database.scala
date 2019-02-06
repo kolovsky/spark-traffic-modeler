@@ -13,4 +13,6 @@ trait Database {
   def getZones(): Array[(Zone, Double)]
   def getProfile(): Array[(Int, Double)]
   def getId(): Array[Int]
+  def saveResult(modelName: String, cache_name: String,config: String, result: String): Unit
+  def getTurnRestriction(): Array[Array[Int]]
 }
